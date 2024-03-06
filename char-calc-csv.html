@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CSV Kolonne Analyse</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #FFFFFF;
+            color: #AAABB8;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            height: 154px;
+            padding: 10px;
+            background-color: #1A2747;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        #header h1 {
+            color: white;
+            text-align: center;
+            width: 100%;
+        }
+
+        .button, .upload-btn {
+            padding: 10px;
+            font-size: 16px;
+            margin: 5px;
+            border: 1px solid white;
+            background-color: #1A2747;
+            color: white;
+            cursor: pointer;
+            width: 150px;
+        }
+
+        #container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        .box {
+            text-align: center;
+            background-color: #1A2747;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            color: white;
+            width: 50%;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .drop-zone {
+            border: 2px dashed #FFFFFF;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            position: relative;
+            transition: background-color 0.3s ease;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            background-color: #1A2747;
+        }
+
+        .drop-zone-text {
+            color: white;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        input[type="file"] {
+            opacity: 0;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            cursor: pointer;
+        }
+
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: left;
+        }
+
+        .highlight {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <div style="width:33%">
+            <button class="button" onclick="window.location.href='/'">Hjem</button>
+            <button class="button" onclick="window.history.back();">Tilbage</button>
+        </div>
+        <div style="width:33%"><h1>Max tegn i kolonne tæller</h1></div>
+        <div style="width:33%"></div>
+    </div>
+    <div id="container">
+        <div class="box">
+            <div class="drop-zone" ondragover="event.preventDefault()" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event)">
+                <div class="drop-zone-text">Træk og slip en fil her, eller klik for at vælge</div>
+                <input type="file" id="csvFileInput" accept=".csv" onchange="handleFileSelect(event)">
+            </div>
+            <div id="output"></div>
+        </div>
+    </div>
+
+    <script>
+        function detectDelimiter(row) {
+            const delimiters = [',', ';', '\t', '|'];
+            let maxCount = 0;
+            let maxDelimiter = ',';
+            delimiters.forEach((delimiter) => {
+                const count = (row.split(delimiter).length - 1);
+                if (count > maxCount) {
+                    maxCount = count;
+                    maxDelimiter = delimiter;
+                }
+            });
+            return maxDelimiter;
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            processFile(file);
+            resetDropZone(); // Nulstiller drop-zone efter filvalg
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            const file = event.dataTransfer.files[0];
+            document.getElementById('csvFileInput').files = event.dataTransfer.files;
+            processFile(file);
+            resetDropZone(); // Nulstiller drop-zone efter filslip
+        }
+
+        function dragEnter(event) {
+            event.preventDefault();
+            event.target.closest('.drop-zone').classList.add('drag-over');
+        }
+
+        function dragLeave(event) {
+            event.target.closest('.drop-zone').classList.remove('drag-over');
+        }
+
+        function resetDropZone() {
+            const dropZones = document.querySelectorAll('.drop-zone');
+            dropZones.forEach(dropZone => {
+                dropZone.classList.remove('drag-over');
+            });
+        }
+
+        function processFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const content = event.target.result;
+                const lines = content.split(/\r\n|\n/);
+                const delimiter = detectDelimiter(lines[0]);
+                
+                let maxChars = 0;
+                let maxCharCol = -1;
+                let maxCharLine = -1;
+
+                lines.forEach((line, lineIndex) => {
+                    const cols = line.split(delimiter);
+                    cols.forEach((col, colIndex) => {
+                        const charCount = col.length;
+                        if (charCount > maxChars) {
+                            maxChars = charCount;
+                            maxCharCol = colIndex;
+                            maxCharLine = lineIndex;
+                        }
+                    });
+                });
+
+                document.getElementById('output').innerHTML = `Max tegn: <span class="highlight">${maxChars}</span><br>Linje: <span class="highlight">${maxCharLine + 1}</span><br> Kolonne: <span class="highlight">${maxCharCol + 1}</span>`;
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
