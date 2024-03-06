@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Farve konvertering</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background-color: transparent;
+    }
+    .input-group {
+        display: flex;
+        align-items: center;
+        margin-top: 10px;
+    }
+    input, button {
+        padding: 10px;
+        font-size: 16px;
+        margin: 5px;
+    }
+    button {
+        border: 1px solid white;
+        background-color: transparent;
+        color: white;
+        cursor: pointer;
+    }
+    #result {
+        margin-left: 20px;
+        padding: 10px;
+        background-color: transparent;
+        color: white;
+        display: flex;
+        flex-direction: column;
+    }
+    .result-text {
+        cursor: pointer;
+        margin-top: 5px;
+        text-decoration: none;
+    }
+    .copied-message {
+        color: white;
+        margin-left: 30px;
+    }
+</style>
+</head>
+<body>
+
+<div class="input-group">
+    <input type="text" id="colorInput" placeholder="Indtast farve (Hex, RGB, CMYK)">
+    <button onclick="convertColor()">Konverter Farve</button>
+    <div id="result"></div>
+</div>
+
+<script>
+function hexToRgb(hex) {
+    let r = 0, g = 0, b = 0;
+    if (hex.length == 4) {
+        r = parseInt(hex[1] + hex[1], 16);
+        g = parseInt(hex[2] + hex[2], 16);
+        b = parseInt(hex[3] + hex[3], 16);
+    } else if (hex.length == 7) {
+        r = parseInt(hex[1] + hex[2], 16);
+        g = parseInt(hex[3] + hex[4], 16);
+        b = parseInt(hex[5] + hex[6], 16);
+    }
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+function rgbToHex(r, g, b) {
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+}
+
+function rgbToCmyk(r, g, b) {
+    let c = 1 - (r / 255);
+    let m = 1 - (g / 255);
+    let y = 1 - (b / 255);
+    let k = Math.min(c, Math.min(m, y));
+
+    if (k == 1) {
+        return "cmyk(0%, 0%, 0%, 100%)";
+    }
+    c = (c - k) / (1 - k) * 100;
+    m = (m - k) / (1 - k) * 100;
+    y = (y - k) / (1 - k) * 100;
+    k = k * 100;
+
+    return `cmyk(${c.toFixed(0)}%, ${m.toFixed(0)}%, ${y.toFixed(0)}%, ${k.toFixed(0)}%)`;
+}
+
+function cmykToRgb(c, m, y, k) {
+    let r = 255 * (1 - c / 100) * (1 - k / 100);
+    let g = 255 * (1 - m / 100) * (1 - k / 100);
+    let b = 255 * (1 - y / 100) * (1 - k / 100);
+    return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+}
+
+function universalColorConverter(input) {
+    let hexPattern = /^#([0-9A-F]{3}){1,2}$/i;
+    let rgbPattern = /^rgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)$/;
+    let cmykPattern = /^cmyk\((\d{1,3})%,\s*(\d{1,3})%,\s*(\d{1,3})%,\s*(\d{1,3})%\)$/;
+    
+    if (hexPattern.test(input)) {
+        let rgb = hexToRgb(input);
+        let [_, r, g, b] = rgb.match(/rgb\((\d+), (\d+), (\d+)\)/).map(Number);
+        let cmyk = rgbToCmyk(r, g, b);
+        return { hex: input.toUpperCase(), rgb, cmyk };
+    } else if (rgbPattern.test(input)) {
+        let [_, r, g, b] = input.match(rgbPattern).map(Number);
+        let hex = rgbToHex(r, g, b);
+        let cmyk = rgbToCmyk(r, g, b);
+        return { hex, rgb: input, cmyk };
+    } else if (cmykPattern.test(input)) {
+        let [_, c, m, y, k] = input.match(cmykPattern).map(Number);
+        let rgb = cmykToRgb(c, m, y, k);
+        let [r, g, b] = rgb.match(/\d+/g).map(Number);
+        let hex = rgbToHex(r, g, b);
+        return { hex, rgb, cmyk: input };
+    } else {
+        throw new Error("Ukendt farveformat");
+    }
+}
+
+let lastCopiedMessage = null; // 
+
+function copyToClipboard(text, element) {
+    const el = document.createElement('textarea');
+    el.value = text;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    showCopiedMessage(element);
+}
+
+function showCopiedMessage(element) {
+    if (lastCopiedMessage) {
+        lastCopiedMessage.remove();
+    }
+
+    const message = document.createElement('span');
+    message.className = 'copied-message';
+    message.textContent = 'Kopieret!';
+    element.appendChild(message);
+    lastCopiedMessage = message;
+
+    setTimeout(() => {
+        message.remove();
+        if (lastCopiedMessage === message) {
+            lastCopiedMessage = null;
+        }
+    }, 5000);
+}
+
+function convertColor() {
+    const input = document.getElementById('colorInput').value;
+    try {
+        const result = universalColorConverter(input);
+        document.getElementById('result').innerHTML = `
+            <span class="result-text" onclick="copyToClipboard('${result.hex}', this)">HEX: ${result.hex}</span>
+            <span class="result-text" onclick="copyToClipboard('${result.rgb}', this)">RGB: ${result.rgb}</span>
+            <span class="result-text" onclick="copyToClipboard('${result.cmyk}', this)">CMYK: ${result.cmyk}</span>
+        `;
+    } catch (error) {
+        document.getElementById('result').textContent = `Fejl: ${error.message}`;
+    }
+}
+</script>
+</body>
+</html>
