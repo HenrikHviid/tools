@@ -120,6 +120,11 @@
     </div>
     <div id="container">
         <div class="box">
+            <div style="margin-bottom: 20px; color: white; font-size: 16px;">
+                <span>Søg i specifik kolonne:</span>
+                <input type="text" id="columnNameInput" placeholder="Indtast kolonnenavn" style="padding: 10px; margin-right: 10px;border: 1px solid;">
+                <button class="button" onclick="countSpecificColumn()">Tæl</button>
+            </div>
             <div class="drop-zone" ondragover="event.preventDefault()" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event)">
                 <div class="drop-zone-text">Træk og slip en fil her, eller klik for at vælge</div>
                 <input type="file" id="csvFileInput" accept=".csv" onchange="handleFileSelect(event)">
@@ -173,33 +178,54 @@
             });
         }
 
-        function processFile(file) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const content = event.target.result;
-                const lines = content.split(/\r\n|\n/);
-                const delimiter = detectDelimiter(lines[0]);
-                
-                let maxChars = 0;
-                let maxCharCol = -1;
-                let maxCharLine = -1;
+        function countSpecificColumn() {
+    const columnName = document.getElementById('columnNameInput').value.trim().toLowerCase();
+    if (!columnName) {
+        alert('Indtast venligst et kolonnenavn');
+        return;
+    }
+    processFile(document.getElementById('csvFileInput').files[0], columnName);
+}
 
-                lines.forEach((line, lineIndex) => {
-                    const cols = line.split(delimiter);
-                    cols.forEach((col, colIndex) => {
-                        const charCount = col.length;
-                        if (charCount > maxChars) {
-                            maxChars = charCount;
-                            maxCharCol = colIndex;
-                            maxCharLine = lineIndex;
-                        }
-                    });
-                });
+function processFile(file, specificColumn = null) {
+    if (!file) {
+        alert('Ingen fil valgt');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const content = event.target.result;
+        const lines = content.split(/\r\n|\n/);
+        const delimiter = detectDelimiter(lines[0]);
+        let headers = lines[0].split(delimiter).map(header => header.toLowerCase());
+        let columnIndex = specificColumn ? headers.indexOf(specificColumn) : -1;
 
-                document.getElementById('output').innerHTML = `Max tegn: <span class="highlight">${maxChars}</span><br>Linje: <span class="highlight">${maxCharLine + 1}</span><br> Kolonne: <span class="highlight">${maxCharCol + 1}</span>`;
-            };
-            reader.readAsText(file);
+        let maxChars = 0, maxCharLine = 0, maxCharColIndex = columnIndex;
+
+        lines.forEach((line, lineIndex) => {
+            if (lineIndex === 0) return; // Spring header over
+            const cols = line.split(delimiter);
+            cols.forEach((col, colIndex) => {
+                if (specificColumn && colIndex !== columnIndex) return;
+                const charCount = col.length;
+                if (charCount > maxChars) {
+                    maxChars = charCount;
+                    maxCharColIndex = colIndex;
+                    maxCharLine = lineIndex;
+                }
+            });
+        });
+
+        let output = `Max tegn: <span class="highlight">${maxChars}</span><br>Linje: <span class="highlight">${maxCharLine + 1}</span>`;
+        if (!specificColumn) {
+            output += `<br>Kolonne: <span class="highlight">${maxCharColIndex + 1}</span>`;
+        } else {
+            output += `<br>Kolonne Navn: <span class="highlight">${specificColumn}</span>`;
         }
+        document.getElementById('output').innerHTML = output;
+    };
+    reader.readAsText(file);
+}
     </script>
 </body>
 </html>
