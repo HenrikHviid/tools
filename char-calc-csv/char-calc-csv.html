@@ -108,6 +108,7 @@
             font-weight: bold;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 </head>
 <body>
     <div id="header">
@@ -122,7 +123,7 @@
         <div class="box">
             <div style="margin-bottom: 20px; color: white; font-size: 16px;">
                 <span>Søg i specifik kolonne:</span>
-                <input type="text" id="columnNameInput" placeholder="Indtast kolonnenavn" style="padding: 10px; margin-right: 10px;border: 1px solid;">
+                <select id="columnNameSelect" style="padding: 10px; margin-right: 10px; border: 1px solid;"></select>
                 <button class="button" onclick="countSpecificColumn()">Tæl</button>
             </div>
             <div class="drop-zone" ondragover="event.preventDefault()" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event)">
@@ -134,23 +135,19 @@
     </div>
 
     <script>
-        function detectDelimiter(row) {
-            const delimiters = [',', ';', '\t', '|'];
-            let maxCount = 0;
-            let maxDelimiter = ',';
-            delimiters.forEach((delimiter) => {
-                const count = (row.split(delimiter).length - 1);
-                if (count > maxCount) {
-                    maxCount = count;
-                    maxDelimiter = delimiter;
-                }
-            });
-            return maxDelimiter;
-        }
-
         function handleFileSelect(event) {
             const file = event.target.files[0];
-            processFile(file);
+            if (!file) {
+                alert('Ingen fil valgt');
+                return;
+            }
+            Papa.parse(file, {
+                header: true,
+                complete: function(results) {
+                    const headers = results.meta.fields.map(field => field.toLowerCase());
+                    updateColumnOptions(headers);
+                }
+            });
             resetDropZone(); // Nulstiller drop-zone efter filvalg
         }
 
@@ -158,7 +155,7 @@
             event.preventDefault();
             const file = event.dataTransfer.files[0];
             document.getElementById('csvFileInput').files = event.dataTransfer.files;
-            processFile(file);
+            handleFileSelect({ target: { files: [file] } });
             resetDropZone(); // Nulstiller drop-zone efter filslip
         }
 
@@ -179,53 +176,47 @@
         }
 
         function countSpecificColumn() {
-    const columnName = document.getElementById('columnNameInput').value.trim().toLowerCase();
-    if (!columnName) {
-        alert('Indtast venligst et kolonnenavn');
-        return;
-    }
-    processFile(document.getElementById('csvFileInput').files[0], columnName);
-}
-
-function processFile(file, specificColumn = null) {
-    if (!file) {
-        alert('Ingen fil valgt');
-        return;
-    }
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        const content = event.target.result;
-        const lines = content.split(/\r\n|\n/);
-        const delimiter = detectDelimiter(lines[0]);
-        let headers = lines[0].split(delimiter).map(header => header.toLowerCase());
-        let columnIndex = specificColumn ? headers.indexOf(specificColumn) : -1;
-
-        let maxChars = 0, maxCharLine = 0, maxCharColIndex = columnIndex;
-
-        lines.forEach((line, lineIndex) => {
-            if (lineIndex === 0) return; // Spring header over
-            const cols = line.split(delimiter);
-            cols.forEach((col, colIndex) => {
-                if (specificColumn && colIndex !== columnIndex) return;
-                const charCount = col.length;
-                if (charCount > maxChars) {
-                    maxChars = charCount;
-                    maxCharColIndex = colIndex;
-                    maxCharLine = lineIndex;
+            const columnName = document.getElementById('columnNameSelect').value;
+            const file = document.getElementById('csvFileInput').files[0];
+            if (!file) {
+                alert('Ingen fil valgt');
+                return;
+            }
+            Papa.parse(file, {
+                header: true,
+                complete: function(results) {
+                    processResults(results.data, columnName !== "all" ? columnName.toLowerCase() : null);
                 }
             });
-        });
-
-        let output = `Max tegn: <span class="highlight">${maxChars}</span><br>Linje: <span class="highlight">${maxCharLine + 1}</span>`;
-        if (!specificColumn) {
-            output += `<br>Kolonne: <span class="highlight">${maxCharColIndex + 1}</span>`;
-        } else {
-            output += `<br>Kolonne Navn: <span class="highlight">${specificColumn}</span>`;
         }
-        document.getElementById('output').innerHTML = output;
-    };
-    reader.readAsText(file);
-}
+
+        function processResults(data, specificColumn = null) {
+            let maxChars = 0, maxCharLine = 0, maxCharColIndex = 0;
+            data.forEach((row, lineIndex) => {
+                Object.keys(row).forEach((col, colIndex) => {
+                    if (specificColumn && col.toLowerCase() !== specificColumn) return;
+                    const charCount = row[col].length;
+                    if (charCount > maxChars) {
+                        maxChars = charCount;
+                        maxCharColIndex = colIndex;
+                        maxCharLine = lineIndex;
+                    }
+                });
+            });
+
+            let output = `Max tegn: <span class="highlight">${maxChars}</span><br>Linje: <span class="highlight">${maxCharLine + 1}</span>`;
+            if (specificColumn) {
+                output += `<br>Kolonne Navn: <span class="highlight">${specificColumn}</span>`;
+            } else {
+                output += `<br>Kolonne: <span class="highlight">${Object.keys(data[0])[maxCharColIndex]}</span>`;
+            }
+            document.getElementById('output').innerHTML = output;
+        }
+
+        function updateColumnOptions(headers) {
+            const columnSelect = document.getElementById('columnNameSelect');
+            columnSelect.innerHTML = `<option value="all">Hele CSV-filen</option>` + headers.map(header => `<option value="${header}">${header}</option>`).join('');
+        }
     </script>
 </body>
 </html>
