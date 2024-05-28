@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dækningsberegner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #FFFFFF;
+            color: #AAABB8;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            height: 154px;
+            padding: 10px;
+            background-color: #1A2747;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        #header h1 {
+            color: white;
+            text-align: center;
+            width: 100%;
+        }
+
+        .flex-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 320px;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            text-align: left;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        .button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 5px;
+            border: 1px solid white;
+            background-color: #1A2747;
+            color: white;
+            cursor: pointer;
+            width: 150px;
+        }
+
+        #calc-dg {
+            padding: 10px 15px;
+            background-color: #202945;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        #calc-dg:hover {
+            background-color: #171d34;
+        }
+
+        .add-btn,
+        .remove-btn {
+            background-color: transparent;
+            border: none;
+            font-size: 24px;
+            color: #202945;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+
+        .add-btn:hover,
+        .remove-btn:hover {
+            color: #171d34;
+        }
+
+        .resultat {
+            margin-top: 20px;
+        }
+
+        .indkøbspris-group {
+            display: flex;
+            align-items: center;
+        }
+
+        .indkøbspris-group input {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .indkøbspris-group button {
+            font-size: 24px;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            line-height: 32px;
+            text-align: center;
+            margin-left: -42px;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+        }
+
+        .indkøbspris-group button:hover {
+            color: #171d34;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="header">
+        <div style="width:33%">
+            <button class="button" onclick="window.location.href='https://henrikhviid.github.io/tools/'">Hjem</button>
+            <button class="button" onclick="window.history.back();">Tilbage</button>
+        </div>
+        <div style="width:33%"><h1>Beregn Dækning</h1></div>
+        <div style="width:33%"></div>
+    </div>
+    <div class="flex-container">
+    <div class="container">
+        <h1>Dæknings beregner</h1>
+        <div class="form-group">
+            <label for="salgspris">Salgspris (kr):</label>
+            <input type="number" id="salgspris" placeholder="Indtast salgspris">
+        </div>
+        <div class="form-group">
+            <label for="indkøbspriser">Indkøbspriser (kr):</label>
+            <div id="indkøbspriserContainer">
+                <div class="indkøbspris-group">
+                    <input type="number" class="indkøbspris" placeholder="Indtast indkøbspris">
+                    <button type="button" class="add-btn" onclick="tilføjIndkøbspris()">+</button>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="procent">Tillæg i procent (%):</label>
+            <input type="number" id="procent" placeholder="Indtast procent">
+        </div>
+        <button id="calc-dg" onclick="beregn()">Beregn</button>
+        <div class="resultat">
+            <h3>Brugte tal i udregningen</h3>
+            <p id="brugtSalgspris"></p>
+            <p id="brugtIndkøbspris"></p>
+            <p id="brugtProcent"></p>
+            <h3>Resultat</h3>
+            <p id="dækningsbidragResultat"></p>
+            <p id="dækningsgradResultat"></p>
+        </div>
+    </div></div>
+    <script>
+        function tilføjIndkøbspris() {
+            const container = document.getElementById('indkøbspriserContainer');
+            const div = document.createElement('div');
+            div.className = 'indkøbspris-group';
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'indkøbspris';
+            input.placeholder = 'Indtast indkøbspris';
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'remove-btn';
+            button.innerHTML = '-';
+            button.onclick = () => fjernIndkøbspris(div);
+            div.appendChild(input);
+            div.appendChild(button);
+            container.appendChild(div);
+        }
+
+        function fjernIndkøbspris(element) {
+            element.remove();
+        }
+
+        function beregn() {
+            const salgspris = parseFloat(document.getElementById('salgspris').value);
+            const indkøbspriser = document.querySelectorAll('.indkøbspris');
+            const procent = parseFloat(document.getElementById('procent').value) || 0;
+
+            if (isNaN(salgspris)) {
+                alert("Indtast venligst en gyldig salgspris");
+                return;
+            }
+
+            let samletIndkøbspris = 0;
+            indkøbspriser.forEach(input => {
+                const pris = parseFloat(input.value);
+                if (!isNaN(pris)) {
+                    samletIndkøbspris += pris;
+                }
+            });
+
+            if (procent !== 0) {
+                samletIndkøbspris += (samletIndkøbspris * (procent / 100));
+            }
+
+            const dækningsbidrag = salgspris - samletIndkøbspris;
+            const dækningsgrad = (dækningsbidrag / salgspris) * 100;
+
+            document.getElementById('brugtSalgspris').innerText = `Salgspris: ${salgspris.toFixed(2)} kr`;
+            document.getElementById('brugtIndkøbspris').innerText = `Samlet indkøbspris: ${samletIndkøbspris.toFixed(2)} kr`;
+            document.getElementById('brugtProcent').innerText = `Tillæg i procent: ${procent.toFixed(2)}%`;
+            document.getElementById('dækningsbidragResultat').innerText = `Dækningsbidrag: ${dækningsbidrag.toFixed(2)} kr`;
+            document.getElementById('dækningsgradResultat').innerText = `Dækningsgrad: ${dækningsgrad.toFixed(2)}%`;
+        }
+    </script>
+</body>
+</html>
